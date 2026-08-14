@@ -100,6 +100,10 @@ The on/off state is tracked via a PID file at `/tmp/scrv-inhibit.pid`.
 
 ---
 
+## Contributors
+
+- [Luquas95](https://github.com/Luquas95) — creator & maintainer
+
 ## License
 
 MIT
