@@ -40,7 +40,6 @@ Tip: assign it to a keyboard shortcut in your DE settings for quick toggling.
 | `dbus-send` | `dbus` | usually pre-installed |
 | `gsettings` | `libglib2.0-bin` | GNOME/Cinnamon/MATE only |
 | `systemd-inhibit` | `systemd` | available on most modern distros |
-| `pkill` | `procps` | usually pre-installed |
 
 ---
 
@@ -61,8 +60,8 @@ Tip: assign it to a keyboard shortcut in your DE settings for quick toggling.
 
 | Compositor / DE | Mechanism |
 |---|---|
-| **Hyprland** (hypridle) | SIGUSR1 → hypridle + systemd-inhibit |
-| **Sway** (swayidle) | SIGUSR1/SIGUSR2 → swayidle + systemd-inhibit |
+| **Hyprland** (hypridle) | systemd-inhibit (natively respected by hypridle via logind) |
+| **Sway** (swayidle) | systemd-inhibit (natively respected by swayidle via logind) |
 | **GNOME Wayland** | systemd-inhibit + DBus |
 | **KDE Plasma Wayland** | systemd-inhibit + DBus |
 | **labwc, river, niri** and other wlroots WMs | systemd-inhibit (when using swayidle) |
@@ -75,27 +74,28 @@ The script applies multiple inhibition layers simultaneously, each covering a di
 
 1. **gsettings** — disables the screensaver and lock at the DE settings level (Cinnamon, GNOME, MATE)
 2. **xset s off -dpms** — disables the X screensaver and DPMS blanking (X11)
-3. **SIGUSR1/SIGUSR2** — directly pauses `hypridle` or `swayidle` (Wayland)
-4. **systemd-inhibit** — idle inhibit at the logind level, works independently of the DE, including Wayland
-5. **Polling loop (every 20 s)** — fallback that sends `SimulateUserActivity` over DBus and resets the X idle timer
+3. **systemd-inhibit** — idle inhibit at the logind level, works independently of the DE, including Wayland (natively respected by `hypridle` and `swayidle`)
+4. **Polling loop (every 20 s)** — fallback that sends `SimulateUserActivity` over DBus and resets the X idle timer
 
 The on/off state is tracked via a PID file at `/tmp/scrv-inhibit.pid`.
+
+> **Note:** earlier versions of this script tried to pause `hypridle`/`swayidle` directly by sending them `SIGUSR1`/`SIGUSR2`. Neither daemon actually implements handlers for those signals — `hypridle` ignores them entirely, and `swayidle` only handles `SIGUSR1` (to force pending timeouts, not to pause). An unhandled signal's default action is to **terminate the process**, so this used to kill the idle daemon outright: the screensaver would then never reactivate after re-enabling it, since the daemon was no longer running. This has been removed; idle inhibition on Wayland now relies solely on `systemd-inhibit`, which both daemons support natively.
 
 ---
 
 ## Known issues
 
-- **Hyprland with `ignore_system_dbus_inhibit = true` in hypridle.conf** — systemd-inhibit will be ignored; the screensaver will still be blocked via SIGUSR1, but the state won't be restored after hypridle restarts
-- **Multiple instances of hypridle/swayidle** — `pkill` sends the signal to all matching processes, which may cause unexpected behavior
+- **Multiple instances of hypridle/swayidle** — not applicable anymore now that signals aren't used; systemd-inhibit is a single shared logind-level lock
 - **XWayland apps** — `xset` only affects the XWayland context and has no impact on the Wayland compositor itself
 - **Race condition on startup** — if the screensaver activates just before the script runs, it may briefly flash before the polling loop deactivates it (only affects DEs where gsettings/inhibit don't take effect immediately)
+- **Up to ~20 s delay releasing the inhibit** — re-enabling the screensaver kills the PID-tracked background subshell, but its trap (which stops the `systemd-inhibit` process) only runs once the subshell's current `sleep` finishes, so the logind inhibit can outlive the toggle by up to `INTERVAL` seconds
 
 ## When it won't work
 
-- **Non-systemd distros** (Alpine with OpenRC, Void with runit, Artix with s6...) — `systemd-inhibit` is unavailable; the script still works via xset + DBus + signals, but with weaker coverage
+- **Non-systemd distros** (Alpine with OpenRC, Void with runit, Artix with s6...) — `systemd-inhibit` is unavailable; the script still works via xset + DBus + gsettings, but with weaker coverage on Wayland
 - **Custom idle daemons** (e.g. `xss-lock`, `swaylock` launched directly without swayidle) — the script has no way to pause them
-- **Hyprland with both `ignore_dbus_inhibit = true` and `ignore_system_dbus_inhibit = true`** — both inhibit methods are intentionally disabled; SIGUSR1 to hypridle still works
-- **Wayland without swayidle or hypridle** (e.g. custom solution via `wlr-idle` or another daemon) — depends on the specific daemon
+- **Hyprland with `general:ignore_systemd_inhibit = true` in hypridle.conf** — hypridle explicitly ignores logind idle inhibitors; scrv has no remaining way to pause it
+- **Wayland without swayidle or hypridle** (e.g. custom solution via `wlr-idle` or another daemon) — depends on whether that daemon honors logind's systemd-inhibit
 - **Remote sessions (SSH, VNC without a DE)** — the DBus session bus may not be available
 
 ---

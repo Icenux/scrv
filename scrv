@@ -23,16 +23,15 @@ poke() {
     gnome-screensaver-command    --deactivate 2>/dev/null
 }
 
-# Pozastavení/obnovení Wayland idle démonů přes signály
-idle_daemon_pause() {
-    pkill -SIGUSR1 hypridle 2>/dev/null  # hypridle: SIGUSR1 toggleuje pause/resume
-    pkill -SIGUSR1 swayidle 2>/dev/null  # swayidle: SIGUSR1 pausuje
-}
-
-idle_daemon_resume() {
-    pkill -SIGUSR1 hypridle 2>/dev/null  # hypridle: SIGUSR1 znovu → resume
-    pkill -SIGUSR2 swayidle 2>/dev/null  # swayidle: SIGUSR2 resumuje
-}
+# Pozn. ke kompatibilitě s Hyprland/Omarchy: hypridle na SIGUSR1/SIGUSR2 vůbec
+# nereaguje – neošetřený signál proces rovnou zabije (výchozí akce jádra).
+# Dřívější "pozastavení" přes `pkill -SIGUSR1 hypridle` proto hypridle zabíjelo
+# a po opětovném zapnutí scrv se spořič už nikdy nereaktivoval, protože démon
+# přestal běžet. Stejný problém má i swayidle (SIGUSR1 tam navíc znamená
+# "vynuť timeout hned", ne pauzu; SIGUSR2 je zcela neošetřený signál, který by
+# proces rovněž zabil). Signály se proto vůbec nepoužívají – idle inhibice na
+# Waylandu jde čistě přes systemd-inhibit (logind), který hypridle i swayidle
+# nativně respektují nezávisle na kompozitoru.
 
 # Nastavení gsettings pro všechna podporovaná DE
 gs_set() {
@@ -53,7 +52,6 @@ if [ -f "$PIDFILE" ]; then
     pid=$(cat "$PIDFILE")
     kill -0 "$pid" 2>/dev/null && kill "$pid"
     rm -f "$PIDFILE"
-    idle_daemon_resume
     gs_set true
     xset s on +dpms 2>/dev/null
     echo "🔒 Screensaver ZAPNUT"
@@ -63,7 +61,6 @@ fi
 # --- VYPNOUT ---
 gs_set false
 xset s off -dpms 2>/dev/null  # X11: vypne X screensaver i DPMS
-idle_daemon_pause              # Wayland: pozastaví hypridle/swayidle
 poke                           # okamžitě resetovat idle timery
 
 (
