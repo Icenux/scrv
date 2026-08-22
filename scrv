@@ -52,6 +52,13 @@ if [ -f "$PIDFILE" ]; then
     pid=$(cat "$PIDFILE")
     kill -0 "$pid" 2>/dev/null && kill "$pid"
     rm -f "$PIDFILE"
+    # Safety net: if the background subshell died without running its TERM
+    # trap (e.g. the terminal it was started in got closed, sending SIGHUP,
+    # which isn't trapped and kills the subshell before it can stop
+    # systemd-inhibit), the "sleep infinity" it spawned is orphaned and goes
+    # on blocking idle forever, even though the PID file is gone and this
+    # script believes the screensaver is back on. Kill it by pattern too.
+    pkill -f "systemd-inhibit --what=idle --who=scrv" 2>/dev/null
     gs_set true
     xset s on +dpms 2>/dev/null
     echo "🔒 Screensaver ZAPNUT"
@@ -64,6 +71,11 @@ xset s off -dpms 2>/dev/null  # X11: vypne X screensaver i DPMS
 poke                           # okamžitě resetovat idle timery
 
 (
+    # Ignore HUP: the subshell must survive the terminal it was started
+    # in being closed, otherwise the systemd-inhibit child it holds is
+    # orphaned instead of stopped (see the pkill safety net below the
+    # PIDFILE branch above).
+    trap '' HUP
     trap 'kill "$inhpid" 2>/dev/null; exit 0' TERM
 
     # systemd-inhibit: inhibit na úrovni logind – funguje nezávisle na DE,
