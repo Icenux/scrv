@@ -32,6 +32,17 @@ poke() {
 # proces rovněž zabil). Signály se proto vůbec nepoužívají – idle inhibice na
 # Waylandu jde čistě přes systemd-inhibit (logind), který hypridle i swayidle
 # nativně respektují nezávisle na kompozitoru.
+#
+# Omarchy 4 (Quattro) ale hypridle úplně opustil - idle/screensaver/lock teď
+# řeší vlastní IdleMonitor přímo v Omarchy shellu (Quickshell), a ten
+# systemd-inhibit vůbec nesleduje (respectInhibitors se tam týká Waylandího
+# idle-inhibit protokolu z aplikací jako mpv/prohlížeč, ne logind locků).
+# Jediný podporovaný způsob je přepínač "Stay Awake" přes
+# `omarchy toggle idle`, ktery jen vytvari/maze
+# ~/.local/state/omarchy/indicators/stay-awake - viz omarchy_idle() nize.
+omarchy_idle() {
+    command -v omarchy >/dev/null 2>&1 && omarchy toggle idle "$1" >/dev/null 2>&1
+}
 
 # Nastavení gsettings pro všechna podporovaná DE
 gs_set() {
@@ -61,6 +72,7 @@ if [ -f "$PIDFILE" ]; then
     pkill -f "systemd-inhibit --what=idle --who=scrv" 2>/dev/null
     gs_set true
     xset s on +dpms 2>/dev/null
+    omarchy_idle allow-idle
     echo "🔒 Screensaver ZAPNUT"
     exit 0
 fi
@@ -68,6 +80,7 @@ fi
 # --- VYPNOUT ---
 gs_set false
 xset s off -dpms 2>/dev/null  # X11: vypne X screensaver i DPMS
+omarchy_idle stay-awake
 poke                           # okamžitě resetovat idle timery
 
 (

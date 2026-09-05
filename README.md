@@ -65,6 +65,7 @@ Tip: assign it to a keyboard shortcut in your DE settings for quick toggling.
 | **GNOME Wayland** | systemd-inhibit + DBus |
 | **KDE Plasma Wayland** | systemd-inhibit + DBus |
 | **labwc, river, niri** and other wlroots WMs | systemd-inhibit (when using swayidle) |
+| **Omarchy 4 "Quattro"** | `omarchy toggle idle` (its own Quickshell `IdleMonitor`, not systemd-inhibit) |
 
 ---
 
@@ -76,10 +77,13 @@ The script applies multiple inhibition layers simultaneously, each covering a di
 2. **xset s off -dpms** — disables the X screensaver and DPMS blanking (X11)
 3. **systemd-inhibit** — idle inhibit at the logind level, works independently of the DE, including Wayland (natively respected by `hypridle` and `swayidle`)
 4. **Polling loop (every 20 s)** — fallback that sends `SimulateUserActivity` over DBus and resets the X idle timer
+5. **`omarchy toggle idle`** — called directly when the `omarchy` CLI is present (silently skipped otherwise)
 
 The on/off state is tracked via a PID file at `/tmp/scrv-inhibit.pid`.
 
 > **Note:** earlier versions of this script tried to pause `hypridle`/`swayidle` directly by sending them `SIGUSR1`/`SIGUSR2`. Neither daemon actually implements handlers for those signals — `hypridle` ignores them entirely, and `swayidle` only handles `SIGUSR1` (to force pending timeouts, not to pause). An unhandled signal's default action is to **terminate the process**, so this used to kill the idle daemon outright: the screensaver would then never reactivate after re-enabling it, since the daemon was no longer running. This has been removed; idle inhibition on Wayland now relies solely on `systemd-inhibit`, which both daemons support natively.
+
+> **Note on Omarchy 4 "Quattro":** Omarchy 4 dropped `hypridle` entirely — idle/screensaver/lock is now handled by its own `IdleMonitor` inside the Omarchy Quickshell shell, which does **not** observe `systemd-inhibit` at all (Quattro's `respectInhibitors` setting only covers the Wayland idle-inhibit protocol from apps like mpv or browsers, not logind locks). The only supported way to disable idling is the "Stay Awake" toggle via `omarchy toggle idle`, which just creates/removes a marker file at `~/.local/state/omarchy/indicators/stay-awake`. scrv calls this directly (`command -v omarchy` gates it, so it's a no-op on every other distro/DE) since none of the other four layers above have any effect on Quattro.
 
 ---
 
