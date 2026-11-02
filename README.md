@@ -3,7 +3,7 @@
 [![Platform](https://img.shields.io/badge/platform-Linux-0078D4?logo=linux&logoColor=white)](https://www.linux.org/)
 [![Language](https://img.shields.io/badge/language-bash-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![license](https://img.shields.io/badge/license-MIT-yellow)](https://opensource.org/licenses/MIT)
-[![GitHub Stars](https://img.shields.io/github/stars/Luquas95/scrv?style=social)](https://github.com/Luquas95/scrv)
+[![GitHub Stars](https://img.shields.io/github/stars/Icenux/scrv?style=social)](https://github.com/Icenux/scrv)
 
 A simple bash script that toggles the screensaver and screen lock on Linux.
 Run it once to disable, run it again to re-enable.
