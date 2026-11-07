@@ -1,0 +1,42 @@
+# The .deb of scrv, called by packaging/package.sh. Besides the application it sets up the shared
+# Icenux APT repository (github.com/Icenux/icenux, by packaging/files/postinst.sh), so later versions
+# arrive with the ordinary system update.
+name: scrv
+arch: all
+platform: linux
+version: ${VERSION}
+release: 1
+section: utils
+priority: optional
+maintainer: Lukas <https://github.com/Icenux/scrv>
+description: |-
+  Toggle screensaver and screen lock on Linux.
+  Supports X11 and Wayland (Hyprland, Sway, GNOME, KDE, Cinnamon...).
+vendor: Icenux
+homepage: https://github.com/Icenux/scrv
+license: MIT
+
+depends:
+  - bash
+recommends:
+  - dbus
+  - systemd
+suggests:
+  - x11-xserver-utils
+  - libglib2.0-bin
+
+contents:
+  - src: scrv
+    dst: /usr/bin/scrv
+    file_info: { mode: 0755 }
+  - src: LICENSE
+    dst: /usr/share/doc/scrv/copyright
+
+  # the Icenux package source: the files lie next to the application, postinst.sh puts them in place
+  - src: packaging/files/icenux.asc
+    dst: /usr/lib/scrv/icenux.asc
+  - src: packaging/files/icenux.list
+    dst: /usr/lib/scrv/icenux.list
+
+scripts:
+  postinstall: packaging/files/postinst.sh
