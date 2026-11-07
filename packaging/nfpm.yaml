@@ -1,4 +1,4 @@
-# The .deb of scrv, called by packaging/package.sh. Besides the application it sets up the shared
+# The .deb and the Arch package (.pkg.tar.zst) of scrv, called by packaging/package.sh. Besides the application it sets up the shared
 # Icenux APT repository (github.com/Icenux/icenux, by packaging/files/postinst.sh), so later versions
 # arrive with the ordinary system update.
 name: scrv
@@ -25,18 +25,29 @@ suggests:
   - x11-xserver-utils
   - libglib2.0-bin
 
+overrides:
+  archlinux:
+    depends:
+      - bash
+
 contents:
   - src: scrv
     dst: /usr/bin/scrv
     file_info: { mode: 0755 }
   - src: LICENSE
     dst: /usr/share/doc/scrv/copyright
+    packager: deb
 
   # the Icenux package source: the files lie next to the application, postinst.sh puts them in place
   - src: packaging/files/icenux.asc
     dst: /usr/lib/scrv/icenux.asc
+    packager: deb
   - src: packaging/files/icenux.list
     dst: /usr/lib/scrv/icenux.list
+    packager: deb
+  - src: LICENSE
+    dst: /usr/share/licenses/scrv/LICENSE
+    packager: archlinux
 
 scripts:
   postinstall: packaging/files/postinst.sh

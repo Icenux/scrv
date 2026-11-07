@@ -70,8 +70,27 @@ jobs:
           echo "$out"
           test "$out" = "scrv ${GITHUB_REF_NAME}"
 
+  test-install-arch:
+    needs: build
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: packages
+          path: rel
+      - name: Install the package
+        run: |
+          pacman -Syu --noconfirm
+          pacman -U --noconfirm "$PWD"/rel/scrv-*-any.pkg.tar.zst
+      - name: The installed files are in place
+        run: |
+          out=$(scrv --version)
+          echo "$out"
+          test "$out" = "scrv ${GITHUB_REF_NAME}"
+
   release:
-    needs: test-install
+    needs: [test-install, test-install-arch]
     runs-on: ubuntu-latest
     permissions:
       contents: write

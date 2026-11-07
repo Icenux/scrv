@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes the release files in dist/release/: scrv_all.deb and SHA256SUMS (signed later, locally, with
+# Makes the release files in dist/release/: scrv_all.deb, the Arch package scrv-VERSION-1-any.pkg.tar.zst and SHA256SUMS (signed later, locally, with
 # icenux-app-sign-upload.sh; the signing key never reaches GitHub).
 #
 # Usage: bash packaging/package.sh VERSION     (needs nfpm in PATH; VERSION must match VERSION in ./scrv)
@@ -15,5 +15,6 @@ out=dist/release
 rm -rf "$out" && mkdir -p "$out"
 
 nfpm package --config packaging/nfpm.yaml --packager deb --target "$out/scrv_all.deb"
-(cd "$out" && sha256sum scrv_all.deb > SHA256SUMS)
+nfpm package --config packaging/nfpm.yaml --packager archlinux --target "$out/"
+(cd "$out" && sha256sum scrv_all.deb scrv-*.pkg.tar.zst > SHA256SUMS)
 ls -l "$out"
