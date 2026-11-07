@@ -10,6 +10,17 @@ Run it once to disable, run it again to re-enable.
 
 ## Installation
 
+From the Icenux package repository (Debian / Ubuntu / Mint) — later versions then arrive with `apt upgrade`:
+
+```bash
+sudo curl -fsSL https://icenux.github.io/icenux/icenux.asc -o /usr/share/keyrings/icenux.asc
+echo 'deb [signed-by=/usr/share/keyrings/icenux.asc] https://icenux.github.io/icenux/apt ./' \
+  | sudo tee /etc/apt/sources.list.d/icenux.list
+sudo apt update && sudo apt install scrv
+```
+
+Or just the script:
+
 **Step 1** — Make the script executable:
 ```bash
 chmod +x scrv
