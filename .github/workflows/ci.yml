@@ -52,10 +52,15 @@ jobs:
       - name: The packages contain the program and the right dependencies
         run: |
           cd dist/release
-          dpkg-deb -c scrv_all.deb | grep -q ' ./usr/bin/scrv$'
-          dpkg-deb -f scrv_all.deb Depends | grep -q 'bash'
-          tar --zstd -tf scrv-*.pkg.tar.zst | grep -q '^usr/bin/scrv$'
-          tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -q '^depend = bash$'
+          # Capture each listing first: `tar -t | grep -q` under pipefail fails with SIGPIPE when grep exits early.
+          deb_files=$(dpkg-deb -c scrv_all.deb)
+          deb_depends=$(dpkg-deb -f scrv_all.deb Depends)
+          arch_files=$(tar --zstd -tf scrv-*.pkg.tar.zst)
+          pkginfo=$(tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO)
+          grep -q ' ./usr/bin/scrv$' <<< "$deb_files"
+          grep -q 'bash' <<< "$deb_depends"
+          grep -q '^usr/bin/scrv$' <<< "$arch_files"
+          grep -q '^depend = bash$' <<< "$pkginfo"
           # nfpm turns recommends/suggests into optdepend: they must be Arch names, not Debian ones
-          tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -q '^optdepend = xorg-xset$'
-          ! tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -qE 'x11-xserver-utils|libglib2.0-bin'
+          grep -q '^optdepend = xorg-xset$' <<< "$pkginfo"
+          ! grep -qE 'x11-xserver-utils|libglib2.0-bin' <<< "$pkginfo"
