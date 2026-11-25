@@ -1,0 +1,61 @@
+name: CI
+# Syntax check, ShellCheck and a trial build of both packages on every PR and push to main.
+# nfpm is pinned (version + SHA256) like in release.yml: bump both files together.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+env:
+  NFPM_VERSION: "2.49.0"
+  NFPM_SHA256: "2afaa5ffb5e3493402e31e7c67a5a1fb42133e3f66fc315ca0051934125561c7"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntax (bash -n)
+        run: bash -n scrv packaging/package.sh packaging/files/postinst.sh
+      - name: ShellCheck
+        run: shellcheck scrv packaging/package.sh packaging/files/postinst.sh
+      - name: --version
+        run: |
+          out=$(./scrv --version)
+          echo "$out"
+          built=$(sed -n 's/^VERSION="\(.*\)"/\1/p' scrv | head -1)
+          test "$out" = "scrv $built"
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: nfpm
+        run: |
+          curl -fsSL -o /tmp/nfpm.tgz \
+            "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz"
+          echo "${NFPM_SHA256}  /tmp/nfpm.tgz" | sha256sum -c -
+          sudo tar -xzf /tmp/nfpm.tgz -C /usr/local/bin nfpm
+      - name: Build both packages
+        run: bash packaging/package.sh "$(sed -n 's/^VERSION="\(.*\)"/\1/p' scrv | head -1)"
+      - name: The packages contain the program and the right dependencies
+        run: |
+          cd dist/release
+          dpkg-deb -c scrv_all.deb | grep -q ' ./usr/bin/scrv$'
+          dpkg-deb -f scrv_all.deb Depends | grep -q 'bash'
+          tar --zstd -tf scrv-*.pkg.tar.zst | grep -q '^usr/bin/scrv$'
+          tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -q '^depend = bash$'
+          # nfpm turns recommends/suggests into optdepend: they must be Arch names, not Debian ones
+          tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -q '^optdepend = xorg-xset$'
+          ! tar --zstd -xOf scrv-*.pkg.tar.zst .PKGINFO | grep -qE 'x11-xserver-utils|libglib2.0-bin'

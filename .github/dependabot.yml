@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs, so they never update on their own. Dependabot bumps the SHA and the
+  # version comment together. nfpm (NFPM_VERSION + NFPM_SHA256 in release.yml and ci.yml) is not covered by
+  # Dependabot: bump it by hand, in both files. The script itself has no package dependencies.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]

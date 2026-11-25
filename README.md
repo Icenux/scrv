@@ -19,6 +19,12 @@ echo 'deb [signed-by=/usr/share/keyrings/icenux.asc] https://icenux.github.io/ic
 sudo apt update && sudo apt install scrv
 ```
 
+On Arch Linux, install the package from the [latest release](https://github.com/Icenux/scrv/releases/latest):
+
+```bash
+sudo pacman -U scrv-X.Y.Z-1-any.pkg.tar.zst
+```
+
 Or just the script:
 
 **Step 1** — Make the script executable:
@@ -114,6 +120,17 @@ The on/off state is tracked via a PID file at `/tmp/scrv-inhibit.pid`.
 - **Remote sessions (SSH, VNC without a DE)** — the DBus session bus may not be available
 
 ---
+
+## Development
+
+The whole program is one Bash script, `scrv`. CI (`.github/workflows/ci.yml`) runs on every pull request:
+
+```bash
+bash -n scrv packaging/package.sh packaging/files/postinst.sh   # syntax
+shellcheck scrv packaging/package.sh packaging/files/postinst.sh
+./scrv --version
+bash packaging/package.sh "$(sed -n 's/^VERSION="\(.*\)"/\1/p' scrv)"   # needs nfpm; builds the .deb and the Arch package
+```
 
 ## Contributors
 

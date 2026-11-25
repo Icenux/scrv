@@ -29,6 +29,13 @@ overrides:
   archlinux:
     depends:
       - bash
+    # Arch package names (the top-level lists use Debian names; nfpm 2.48+ turns recommends/suggests into optdepend)
+    recommends:
+      - dbus
+      - systemd
+    suggests:
+      - xorg-xset
+      - glib2
 
 contents:
   - src: scrv
